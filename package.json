@@ -1,0 +1,23 @@
+{
+  "name": "paintboard",
+  "version": "1.0.0",
+  "description": "Collaborative pixel drawing board with token-based authentication",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "drawing",
+    "canvas",
+    "websocket",
+    "collaborative"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.17.1",
+    "uuid": "^9.0.1"
+  }
+}

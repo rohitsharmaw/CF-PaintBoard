@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaintBoard - Collaborative Pixel Drawing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 PaintBoard</h1>
+            <p>Collaborative Pixel Drawing Board</p>
+        </header>
+
+        <!-- Token Section -->
+        <div class="token-section" id="tokenSection">
+            <h2>Get Started</h2>
+            <div class="input-group">
+                <input type="text" id="invitationCode" placeholder="Enter invitation code">
+                <button onclick="generateToken()">Generate Token</button>
+            </div>
+            <div id="tokenDisplay" class="hidden">
+                <p>Your token:</p>
+                <div class="token-box">
+                    <code id="tokenValue"></code>
+                    <button onclick="copyToken()">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Section -->
+        <div class="canvas-section hidden" id="canvasSection">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="colorPicker">Color:</label>
+                    <input type="color" id="colorPicker" value="#000000">
+                    <input type="text" id="colorHex" value="#000000" maxlength="7" pattern="#[0-9A-Fa-f]{6}">
+                </div>
+                <div class="control-group">
+                    <span id="cooldownStatus"></span>
+                </div>
+                <div class="control-group">
+                    <button onclick="showAdmin()">Admin Panel</button>
+                    <button onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="info">
+                <p>Click on a pixel to draw. Cooldown: <span id="cooldownTime">30</span> seconds</p>
+                <p>Canvas size: <span id="canvasSize">100x100</span></p>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel hidden" id="adminPanel">
+            <h2>Admin Panel</h2>
+            <button onclick="hideAdmin()">Back to Canvas</button>
+            
+            <div class="admin-section">
+                <h3>Invitation Codes</h3>
+                <div class="input-group">
+                    <input type="text" id="newInviteCode" placeholder="New invitation code">
+                    <button onclick="addInviteCode()">Add Code</button>
+                </div>
+                <ul id="inviteCodesList"></ul>
+            </div>
+
+            <div class="admin-section">
+                <h3>Settings</h3>
+                <div class="input-group">
+                    <label for="cooldownInput">Cooldown (seconds):</label>
+                    <input type="number" id="cooldownInput" min="0" value="30">
+                    <button onclick="updateCooldown()">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

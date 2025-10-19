@@ -1,0 +1,12 @@
+{
+  "canvasWidth": 100,
+  "canvasHeight": 100,
+  "cooldownSeconds": 30,
+  "port": 3000,
+  "invitationCodes": [
+    "INVITE2024",
+    "DEMO1234",
+    "TEST5678",
+    "NEWCODE2024"
+  ]
+}
