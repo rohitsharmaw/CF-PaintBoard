@@ -5,10 +5,11 @@ A collaborative pixel drawing board with token-based authentication and real-tim
 ## Features
 
 - 🎨 Draw pixels on a shared canvas with custom HEX colors
-- 🔐 Token-based authentication using invitation codes
+- � View the live canvas without signing in; tokens are only required to draw
+- �🔐 Token-based authentication using invitation codes
 - ⏱️ Configurable cooldown system (default: 30 seconds)
 - 🔄 Real-time canvas updates via WebSocket
-- 👨‍💼 Admin panel for managing invitation codes and settings
+- 👨‍💼 Admin panel for managing invitation codes and settings (protected with Basic Auth)
 - 📝 Configuration file for easy customization
 
 ## Installation
@@ -32,12 +33,22 @@ http://localhost:3000
 
 Edit `config.json` to customize:
 
+- `canvasWidth`: Width of the canvas in pixels
+- `canvasHeight`: Height of the canvas in pixels
+- `cooldownSeconds`: Time in seconds between each draw action
+- `port`: Server port (default: 3000)
+- `adminUsername`: Username for the admin area (Basic Auth)
+- `adminPassword`: Password for the admin area (Basic Auth)
+- `invitationCodes`: Array of valid invitation codes
+
 ```json
 {
   "canvasWidth": 100,
   "canvasHeight": 100,
   "cooldownSeconds": 30,
   "port": 3000,
+  "adminUsername": "admin",
+  "adminPassword": "paintboard123",
   "invitationCodes": [
     "INVITE2024",
     "DEMO1234",
@@ -46,19 +57,14 @@ Edit `config.json` to customize:
 }
 ```
 
-- `canvasWidth`: Width of the canvas in pixels
-- `canvasHeight`: Height of the canvas in pixels
-- `cooldownSeconds`: Time in seconds between each draw action
-- `port`: Server port (default: 3000)
-- `invitationCodes`: Array of valid invitation codes
-
 ## Usage
 
 ### Getting Started
 
-1. Enter an invitation code (default codes: `INVITE2024`, `DEMO1234`, `TEST5678`)
-2. Click "Generate Token" to receive your drawing token
-3. Start drawing on the canvas!
+1. Browse to the board to watch the canvas update in real time.
+2. When you're ready to draw, enter an invitation code (default codes: `INVITE2024`, `DEMO1234`, `TEST5678`).
+3. Click "Generate Token" to receive your drawing token and keep it handy for future sessions.
+4. Start drawing on the canvas!
 
 ### Drawing
 
@@ -74,7 +80,7 @@ The admin panel allows you to:
 - Delete existing invitation codes
 - Update the cooldown time
 
-Click "Admin Panel" button to access these features.
+Open `http://localhost:3000/admin` and authenticate with the configured username and password to access these features.
 
 ## API Endpoints
 

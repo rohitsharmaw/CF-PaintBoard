@@ -26,10 +26,7 @@ A fully functional collaborative pixel drawing board website that meets all requ
   - Configuration management
 
 ### Frontend (HTML/CSS/JavaScript)
-- **public/index.html**: Main HTML structure with three views
-  - Token generation section
-  - Canvas drawing section
-  - Admin panel section
+- **public/index.html**: Main HTML structure for token generation and drawing
   
 - **public/style.css**: Beautiful gradient UI design
   - Responsive layout
@@ -41,8 +38,8 @@ A fully functional collaborative pixel drawing board website that meets all requ
   - Canvas rendering with HTML5 Canvas API
   - Token management with localStorage
   - Color picker synchronization
-  - Admin panel functionality
   - Cooldown timer display
+- **admin/index.html** & **admin/admin.js**: Protected admin console served from `/admin` with HTTP Basic authentication
 
 ### Configuration
 - **config.json**: Centralized configuration
@@ -96,6 +93,7 @@ A fully functional collaborative pixel drawing board website that meets all requ
    - Initial canvas state sent on connection
 
 5. **Admin Panel**
+   - Accessible at `/admin` with HTTP Basic authentication
    - View all invitation codes
    - Add new invitation codes
    - Delete existing codes
@@ -170,9 +168,9 @@ PaintBoard/
 6. Wait 30 seconds before drawing again
 
 ### For Administrators:
-1. Click "Admin Panel" button
-2. Add/delete invitation codes
-3. Modify cooldown time
+1. Visit `http://localhost:3000/admin`
+2. Enter the configured Basic Auth credentials
+3. Add/delete invitation codes or modify cooldown time
 4. Changes are saved automatically
 
 ### Configuration:
@@ -217,7 +215,6 @@ Edit `config.json` to:
 - Drawing tools (line, rectangle, fill)
 - Export canvas as image
 - Rate limiting per IP
-- Authentication for admin panel
 - Multi-room support
 
 ## Conclusion

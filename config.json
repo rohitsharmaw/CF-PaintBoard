@@ -3,6 +3,8 @@
   "canvasHeight": 100,
   "cooldownSeconds": 30,
   "port": 3000,
+  "adminUsername": "admin",
+  "adminPassword": "paintboard123",
   "invitationCodes": [
     "INVITE2024",
     "DEMO1234",

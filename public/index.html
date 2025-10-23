@@ -16,6 +16,7 @@
         <!-- Token Section -->
         <div class="token-section" id="tokenSection">
             <h2>Get Started</h2>
+            <p class="token-hint">You can watch the canvas without a token. Generate one below when you're ready to draw.</p>
             <div class="input-group">
                 <input type="text" id="invitationCode" placeholder="Enter invitation code">
                 <button onclick="generateToken()">Generate Token</button>
@@ -30,7 +31,7 @@
         </div>
 
         <!-- Canvas Section -->
-        <div class="canvas-section hidden" id="canvasSection">
+        <div class="canvas-section" id="canvasSection">
             <div class="controls">
                 <div class="control-group">
                     <label for="colorPicker">Color:</label>
@@ -41,7 +42,6 @@
                     <span id="cooldownStatus"></span>
                 </div>
                 <div class="control-group">
-                    <button onclick="showAdmin()">Admin Panel</button>
                     <button onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -51,30 +51,6 @@
             <div class="info">
                 <p>Click on a pixel to draw. Cooldown: <span id="cooldownTime">30</span> seconds</p>
                 <p>Canvas size: <span id="canvasSize">100x100</span></p>
-            </div>
-        </div>
-
-        <!-- Admin Panel -->
-        <div class="admin-panel hidden" id="adminPanel">
-            <h2>Admin Panel</h2>
-            <button onclick="hideAdmin()">Back to Canvas</button>
-            
-            <div class="admin-section">
-                <h3>Invitation Codes</h3>
-                <div class="input-group">
-                    <input type="text" id="newInviteCode" placeholder="New invitation code">
-                    <button onclick="addInviteCode()">Add Code</button>
-                </div>
-                <ul id="inviteCodesList"></ul>
-            </div>
-
-            <div class="admin-section">
-                <h3>Settings</h3>
-                <div class="input-group">
-                    <label for="cooldownInput">Cooldown (seconds):</label>
-                    <input type="number" id="cooldownInput" min="0" value="30">
-                    <button onclick="updateCooldown()">Update</button>
-                </div>
             </div>
         </div>
     </div>

@@ -53,6 +53,12 @@ header p {
     margin-bottom: 20px;
 }
 
+.token-hint {
+    color: #666;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+}
+
 .input-group {
     display: flex;
     gap: 10px;

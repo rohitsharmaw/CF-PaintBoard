@@ -7,21 +7,25 @@ let cooldownEnd = 0;
 let cooldownInterval;
 
 // Initialize on page load
-window.onload = () => {
+window.onload = async () => {
+    setupColorSync();
+    updateTokenDisplay();
+
+    await loadCanvas();
+
     if (currentToken) {
-        validateAndLoadCanvas();
-    } else {
-        showTokenSection();
+        await validateToken();
     }
-    
-    // Sync color picker and hex input
+};
+
+function setupColorSync() {
     const colorPicker = document.getElementById('colorPicker');
     const colorHex = document.getElementById('colorHex');
-    
+
     colorPicker.addEventListener('input', (e) => {
         colorHex.value = e.target.value.toUpperCase();
     });
-    
+
     colorHex.addEventListener('input', (e) => {
         let value = e.target.value;
         if (!value.startsWith('#')) {
@@ -32,31 +36,23 @@ window.onload = () => {
         }
         colorHex.value = value.toUpperCase();
     });
-};
-
-// Show/hide sections
-function showTokenSection() {
-    document.getElementById('tokenSection').classList.remove('hidden');
-    document.getElementById('canvasSection').classList.add('hidden');
-    document.getElementById('adminPanel').classList.add('hidden');
 }
 
-function showCanvasSection() {
-    document.getElementById('tokenSection').classList.add('hidden');
-    document.getElementById('canvasSection').classList.remove('hidden');
-    document.getElementById('adminPanel').classList.add('hidden');
-}
+function updateTokenDisplay() {
+    const tokenValueElement = document.getElementById('tokenValue');
+    const tokenDisplayElement = document.getElementById('tokenDisplay');
 
-function showAdmin() {
-    document.getElementById('canvasSection').classList.add('hidden');
-    document.getElementById('adminPanel').classList.remove('hidden');
-    loadInviteCodes();
-    loadSettings();
-}
+    if (!tokenValueElement || !tokenDisplayElement) {
+        return;
+    }
 
-function hideAdmin() {
-    document.getElementById('adminPanel').classList.add('hidden');
-    document.getElementById('canvasSection').classList.remove('hidden');
+    if (currentToken) {
+        tokenValueElement.textContent = currentToken;
+        tokenDisplayElement.classList.remove('hidden');
+    } else {
+        tokenValueElement.textContent = '';
+        tokenDisplayElement.classList.add('hidden');
+    }
 }
 
 // Token generation
@@ -80,12 +76,7 @@ async function generateToken() {
         if (response.ok) {
             currentToken = data.token;
             localStorage.setItem('paintboardToken', currentToken);
-            document.getElementById('tokenValue').textContent = currentToken;
-            document.getElementById('tokenDisplay').classList.remove('hidden');
-            
-            setTimeout(() => {
-                loadCanvas();
-            }, 1000);
+            updateTokenDisplay();
         } else {
             alert(data.error || 'Failed to generate token');
         }
@@ -97,29 +88,39 @@ async function generateToken() {
 
 function copyToken() {
     const tokenValue = document.getElementById('tokenValue').textContent;
+    if (!tokenValue) {
+        alert('No token available. Generate one first.');
+        return;
+    }
     navigator.clipboard.writeText(tokenValue).then(() => {
         alert('Token copied to clipboard!');
     });
 }
 
-async function validateAndLoadCanvas() {
+async function validateToken() {
+    if (!currentToken) {
+        return false;
+    }
+
     try {
         const response = await fetch('/api/validate-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: currentToken })
         });
-        
+
         if (response.ok) {
-            loadCanvas();
-        } else {
-            localStorage.removeItem('paintboardToken');
-            currentToken = null;
-            showTokenSection();
+            updateTokenDisplay();
+            return true;
         }
+
+        localStorage.removeItem('paintboardToken');
+        currentToken = null;
+        updateTokenDisplay();
+        return false;
     } catch (error) {
         console.error('Error:', error);
-        showTokenSection();
+        return false;
     }
 }
 
@@ -143,8 +144,6 @@ async function loadCanvas() {
         
         // Connect WebSocket
         connectWebSocket();
-        
-        showCanvasSection();
     } catch (error) {
         console.error('Error loading canvas:', error);
         alert('Failed to load canvas');
@@ -193,6 +192,11 @@ async function handleCanvasClick(event) {
         alert('Invalid color format. Please use HEX format like #FF0000');
         return;
     }
+
+    if (!currentToken) {
+        alert('You need a valid token to draw. Generate one using an invitation code above.');
+        return;
+    }
     
     try {
         const response = await fetch('/api/draw', {
@@ -213,6 +217,11 @@ async function handleCanvasClick(event) {
         } else if (response.status === 429) {
             alert(`Cooldown active. Wait ${data.remainingSeconds} seconds.`);
             startCooldown(data.remainingSeconds);
+        } else if (response.status === 403) {
+            alert((data && data.error) || 'Token is invalid. Please generate a new one.');
+            localStorage.removeItem('paintboardToken');
+            currentToken = null;
+            updateTokenDisplay();
         } else {
             alert(data.error || 'Failed to draw pixel');
         }
@@ -280,124 +289,6 @@ function connectWebSocket() {
 function logout() {
     localStorage.removeItem('paintboardToken');
     currentToken = null;
-    if (ws) {
-        ws.close();
-    }
-    showTokenSection();
-    location.reload();
+    updateTokenDisplay();
 }
 
-// Admin functions
-async function loadInviteCodes() {
-    try {
-        const response = await fetch('/api/admin/invitation-codes');
-        const data = await response.json();
-        
-        const list = document.getElementById('inviteCodesList');
-        list.innerHTML = '';
-        
-        data.invitationCodes.forEach(code => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span><strong>${code}</strong></span>
-                <button onclick="deleteInviteCode('${code}')">Delete</button>
-            `;
-            list.appendChild(li);
-        });
-    } catch (error) {
-        console.error('Error loading invite codes:', error);
-    }
-}
-
-async function addInviteCode() {
-    const code = document.getElementById('newInviteCode').value.trim();
-    
-    if (!code) {
-        alert('Please enter a code');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/admin/invitation-codes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            document.getElementById('newInviteCode').value = '';
-            loadInviteCodes();
-            alert('Invitation code added successfully!');
-        } else {
-            alert(data.error || 'Failed to add code');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to add code');
-    }
-}
-
-async function deleteInviteCode(code) {
-    if (!confirm(`Delete invitation code "${code}"?`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/admin/invitation-codes/${encodeURIComponent(code)}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            loadInviteCodes();
-            alert('Invitation code deleted successfully!');
-        } else {
-            const data = await response.json();
-            alert(data.error || 'Failed to delete code');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to delete code');
-    }
-}
-
-async function loadSettings() {
-    try {
-        const response = await fetch('/api/config');
-        const data = await response.json();
-        document.getElementById('cooldownInput').value = data.cooldownSeconds;
-    } catch (error) {
-        console.error('Error loading settings:', error);
-    }
-}
-
-async function updateCooldown() {
-    const cooldownSeconds = parseInt(document.getElementById('cooldownInput').value);
-    
-    if (isNaN(cooldownSeconds) || cooldownSeconds < 0) {
-        alert('Invalid cooldown value');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/admin/cooldown', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cooldownSeconds })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            config.cooldownSeconds = cooldownSeconds;
-            document.getElementById('cooldownTime').textContent = cooldownSeconds;
-            alert('Cooldown updated successfully!');
-        } else {
-            alert(data.error || 'Failed to update cooldown');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to update cooldown');
-    }
-}

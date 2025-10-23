@@ -7,6 +7,7 @@ const path = require('path');
 
 // Load configuration
 const configPath = path.join(__dirname, 'config.json');
+const adminStaticPath = path.join(__dirname, 'admin');
 let config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 const app = express();
@@ -16,6 +17,43 @@ const wss = new WebSocket.Server({ server });
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
+
+// Admin auth middleware
+function adminAuth(req, res, next) {
+  if (!reloadConfig()) {
+    return res.status(500).send('Failed to load configuration');
+  }
+
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const encoded = header.split(' ')[1];
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  const separatorIndex = decoded.indexOf(':');
+
+  if (separatorIndex === -1) {
+    res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
+    return res.status(401).send('Invalid authentication format');
+  }
+
+  const username = decoded.slice(0, separatorIndex);
+  const password = decoded.slice(separatorIndex + 1);
+
+  if (username === config.adminUsername && password === config.adminPassword) {
+    return next();
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
+  return res.status(401).send('Invalid credentials');
+}
+
+// Protected admin assets
+if (fs.existsSync(adminStaticPath)) {
+  app.use('/admin', adminAuth, express.static(adminStaticPath));
+}
 
 // Data structures
 const tokens = new Map(); // Map<token, { inviteCode, createdAt }>
@@ -169,6 +207,9 @@ app.get('/api/config', (req, res) => {
     cooldownSeconds: config.cooldownSeconds
   });
 });
+
+// Admin routes require authentication
+app.use('/api/admin', adminAuth);
 
 // Admin API: Get all invitation codes
 app.get('/api/admin/invitation-codes', (req, res) => {
