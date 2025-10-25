@@ -15,6 +15,8 @@
             <h2>邀请码</h2>
             <div class="input-group">
                 <input type="text" id="newInviteCode" placeholder="输入新的邀请码">
+                <input type="number" id="newInviteTimeWindow" min="1" value="3600" style="width:120px" placeholder="循环时间(秒)">
+                <input type="number" id="newInviteMaxCount" min="1" value="3" style="width:120px" placeholder="使用次数">
                 <button type="button" onclick="addInviteCode()">添加邀请码</button>
             </div>
             <ul id="inviteCodesList"></ul>

@@ -133,13 +133,21 @@ async function generateToken() {
             updateTokenDisplay();
             // token-box显示后再赋值T/X，确保渲染
             setTimeout(() => {
-                document.getElementById('resetSeconds').textContent = data.resetIn ?? 'T';
-                document.getElementById('remainingGenerations').textContent = data.leftCount ?? 'X';
+                // 如果 leftCount 已经 <= 0，表示该邀请码不能再生成，显示为 0
+                if (typeof data.leftCount !== 'undefined' && data.leftCount <= 0) {
+                    // 保证后面的 data.leftCount-1 能得到 0
+                    data.leftCount = 1;
+                    document.getElementById('resetSeconds').textContent = '0';
+                } else {
+                    document.getElementById('resetSeconds').textContent =
+                        (typeof data.resetIn !== 'undefined') ? Math.max(0, data.resetIn - 1) : 'T';
+                }
+                document.getElementById('remainingGenerations').textContent = data.leftCount-1 ?? 'X';
             }, 50);
         } else {
             if (typeof data.resetIn !== 'undefined' && typeof data.leftCount !== 'undefined') {
-                document.getElementById('resetSeconds').textContent = data.resetIn;
-                document.getElementById('remainingGenerations').textContent = data.leftCount;
+                document.getElementById('resetSeconds').textContent = data.resetIn-1;
+                document.getElementById('remainingGenerations').textContent = data.leftCount-1;
             }
             alert(data.error || '生成 token 失败');
         }
@@ -332,7 +340,7 @@ function updateCooldownDisplay() {
         document.getElementById('cooldownStatus').textContent = 
             `剩余冷却时间: ${remaining}s`;
     } else {
-        document.getElementById('cooldownStatus').textContent = '';
+        document.getElementById('cooldownStatus').textContent = '在绘板上选择一个点吧！';
         if (cooldownInterval) {
             clearInterval(cooldownInterval);
         }

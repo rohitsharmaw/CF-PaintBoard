@@ -58,6 +58,11 @@ async function handleAPI(request, env) {
   if (method === 'GET' && url.pathname === '/api/config') {
     return getConfig(request, env);
   }
+  // 新增：邀请码剩余次数
+  if (method === 'GET' && url.pathname.match(/^\/api\/admin\/invitation-code-usage\/(.+)$/)) {
+    const code = url.pathname.match(/^\/api\/admin\/invitation-code-usage\/(.+)$/)[1];
+    return getInvitationCodeUsage(request, env, code);
+  }
 
   // Admin routes
   if (url.pathname.startsWith('/api/admin/')) {
@@ -100,26 +105,57 @@ async function generateToken(request, env) {
     return Response.json({ error: '请填写邀请码' }, { status: 400 });
   }
 
-  const config = await getConfigFromKV(env);
-  if (!config.invitationCodes.includes(invitationCode)) {
-    return Response.json({ error: '邀请码无效！' }, { status: 403 });
-  }
+  // 移除 includes 校验，统一用 inviteObj 查找
+  // const config = await getConfigFromKV(env);
+  // if (!config.invitationCodes.includes(invitationCode)) {
+  //   return Response.json({ error: '邀请码无效！' }, { status: 403 });
+  // }
 
-  // Check recent usage
-  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
-  const now = Date.now();
-  const oneHourAgo = now - 3600000;
-  for (const [token, data] of Object.entries(tokens)) {
-    if (data.inviteCode === invitationCode && data.createdAt > oneHourAgo) {
-      return Response.json({ error: '此邀请码在过去1小时内已被使用，请稍后再试。' }, { status: 429 });
+  const config = await getConfigFromKV(env);
+  // 兼容字符串数组和对象数组
+  let inviteObj = null;
+  if (Array.isArray(config.invitationCodes)) {
+    for (const item of config.invitationCodes) {
+      if (typeof item === 'string' && item === invitationCode) {
+        inviteObj = { code: item, timeWindow: 3600, maxCount: 1 };
+        break;
+      } else if (item && typeof item === 'object' && item.code === invitationCode) {
+        inviteObj = item;
+        break;
+      }
     }
   }
+  if (!inviteObj) {
+    return Response.json({ error: '邀请码无效！' }, { status: 403 });
+  }
+  const { timeWindow = 3600, maxCount = 1 } = inviteObj;
 
+  // 获取当前邀请码的限流状态
+  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
+  const now = Date.now();
+  let count = 0;
+  let windowStart = now;
+  for (const [token, data] of Object.entries(tokens)) {
+    if (data.inviteCode === invitationCode) {
+      // 判断是否在当前时间窗口
+      if (now - data.createdAt < (inviteObj.timeWindow ?? timeWindow) * 1000) {
+        count++;
+        if (data.createdAt < windowStart) windowStart = data.createdAt;
+      }
+    }
+  }
+  const leftCount = Math.max((inviteObj.maxCount ?? maxCount) - count, 0);
+  const resetIn = Math.ceil((windowStart + (inviteObj.timeWindow ?? timeWindow) * 1000 - now) / 1000);
+  if (leftCount <= 0) {
+    return Response.json({ error: `此邀请码在本时段已达最大使用次数，请${resetIn}秒后再试。`, resetIn, leftCount: 0 }, { status: 429 });
+  }
+
+  // 生成 token时也用leftCount
   const token = crypto.randomUUID();
   tokens[token] = { inviteCode: invitationCode, createdAt: now };
   await env.ED_PB_KV.put('tokens', JSON.stringify(tokens));
 
-  return Response.json({ token });
+  return Response.json({ token, resetIn, leftCount });
 }
 
 async function validateToken(request, env) {
@@ -224,18 +260,27 @@ async function addInvitationCode(request, env) {
   } catch (e) {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const { code } = body;
+  const { code, timeWindow, maxCount } = body;
 
   if (!code) {
     return Response.json({ error: '请填写邀请码' }, { status: 400 });
   }
 
   const config = await getConfigFromKV(env);
-  if (config.invitationCodes.includes(code)) {
+  // 判断是否已存在
+  let exists = false;
+  for (const item of config.invitationCodes) {
+    if ((typeof item === 'string' && item === code) || (item && typeof item === 'object' && item.code === code)) {
+      exists = true;
+      break;
+    }
+  }
+  if (exists) {
     return Response.json({ error: '该邀请码已存在' }, { status: 400 });
   }
 
-  config.invitationCodes.push(code);
+  // 保存为对象数组
+  config.invitationCodes.push({ code, timeWindow: timeWindow ?? 3600, maxCount: maxCount ?? 1 });
   await env.ED_PB_KV.put('config', JSON.stringify(config));
 
   return Response.json({ success: true, invitationCodes: config.invitationCodes });
@@ -243,7 +288,8 @@ async function addInvitationCode(request, env) {
 
 async function deleteInvitationCode(request, env, code) {
   const config = await getConfigFromKV(env);
-  const index = config.invitationCodes.indexOf(code);
+  // 支持对象数组和字符串数组
+  const index = config.invitationCodes.findIndex(item => (typeof item === 'string' && item === code) || (item && typeof item === 'object' && item.code === code));
   if (index === -1) {
     return Response.json({ error: '未找到该邀请码' }, { status: 404 });
   }
@@ -303,4 +349,36 @@ async function getConfigFromKV(env) {
     await env.ED_PB_KV.put('config', JSON.stringify(config));
   }
   return config;
+}
+
+// 新增 API 路由：获取邀请码剩余可用次数
+async function getInvitationCodeUsage(request, env, code) {
+  const config = await getConfigFromKV(env);
+  let inviteObj = null;
+  if (Array.isArray(config.invitationCodes)) {
+    for (const item of config.invitationCodes) {
+      if ((typeof item === 'string' && item === code) || (item && typeof item === 'object' && item.code === code)) {
+        inviteObj = typeof item === 'string' ? { code: item, timeWindow: 3600, maxCount: 1 } : item;
+        break;
+      }
+    }
+  }
+  if (!inviteObj) {
+    return Response.json({ error: '邀请码无效！' }, { status: 404 });
+  }
+  const { timeWindow = 3600, maxCount = 1 } = inviteObj;
+  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
+  const now = Date.now();
+  let count = 0;
+  let windowStart = now;
+  for (const [token, data] of Object.entries(tokens)) {
+    if (data.inviteCode === code) {
+      if (now - data.createdAt < (inviteObj.timeWindow ?? timeWindow) * 1000) {
+        count++;
+        if (data.createdAt < windowStart) windowStart = data.createdAt;
+      }
+    }
+  }
+  const leftCount = Math.max((inviteObj.maxCount ?? maxCount) - count, 0);
+  return Response.json({ leftCount });
 }
