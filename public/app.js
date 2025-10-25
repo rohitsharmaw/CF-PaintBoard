@@ -6,6 +6,9 @@ let config = { cooldownSeconds: 30, canvasWidth: 100, canvasHeight: 100 };
 let cooldownEnd = 0;
 let cooldownInterval;
 
+// API base URL - change this to your Workers URL if static files are served separately
+const API_BASE = '';  // e.g., 'https://your-worker.your-account.workers.dev'
+
 // Initialize on page load
 window.onload = async () => {
     setupColorSync();
@@ -65,7 +68,7 @@ async function generateToken() {
     }
     
     try {
-        const response = await fetch('/api/generate-token', {
+        const response = await fetch(`${API_BASE}/api/generate-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ invitationCode })
@@ -103,7 +106,7 @@ async function validateToken() {
     }
 
     try {
-        const response = await fetch('/api/validate-token', {
+        const response = await fetch(`${API_BASE}/api/validate-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: currentToken })
@@ -128,7 +131,7 @@ async function validateToken() {
 async function loadCanvas() {
     try {
         // Load config
-        const configResponse = await fetch('/api/config');
+        const configResponse = await fetch(`${API_BASE}/api/config`);
         config = await configResponse.json();
         
         document.getElementById('cooldownTime').textContent = config.cooldownSeconds;
@@ -136,7 +139,7 @@ async function loadCanvas() {
             `${config.canvasWidth}x${config.canvasHeight}`;
         
         // Load canvas
-        const canvasResponse = await fetch('/api/canvas');
+        const canvasResponse = await fetch(`${API_BASE}/api/canvas`);
         const canvasData = await canvasResponse.json();
         
         setupCanvas(canvasData.width, canvasData.height);
@@ -219,7 +222,7 @@ async function handleCanvasClick(event) {
     }
     
     try {
-        const response = await fetch('/api/draw', {
+        const response = await fetch(`${API_BASE}/api/draw`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -279,7 +282,8 @@ function updateCooldownDisplay() {
 // WebSocket
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${protocol}//${window.location.host}`);
+    const host = API_BASE ? new URL(API_BASE).host : window.location.host;
+    ws = new WebSocket(`${protocol}//${host}/ws`);
     
     ws.onopen = () => {
         console.log('WebSocket 已连接');

@@ -1,0 +1,15 @@
+name = "paintboard"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "ED_PB_KV"
+id = "9becaa302e5d4aeaa374a2ef2a4c558c"  # 需要在 Cloudflare Dashboard 创建 KV 命名空间并替换 ID
+
+[[durable_objects.bindings]]
+name = "WEBSOCKET_HANDLER"
+class_name = "WebSocketHandler"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WebSocketHandler"]

@@ -5,14 +5,14 @@ A collaborative pixel drawing board with token-based authentication and real-tim
 ## Features
 
 - 🎨 Draw pixels on a shared canvas with custom HEX colors
-- � View the live canvas without signing in; tokens are only required to draw
-- �🔐 Token-based authentication using invitation codes
+- 👀 View the live canvas without signing in; tokens are only required to draw
+- 🔐 Token-based authentication using invitation codes
 - ⏱️ Configurable cooldown system (default: 30 seconds)
 - 🔄 Real-time canvas updates via WebSocket
 - 👨‍💼 Admin panel for managing invitation codes and settings (protected with Basic Auth)
 - 📝 Configuration file for easy customization
 
-## Installation
+## Installation (Local Development)
 
 1. Install dependencies:
 ```bash
@@ -29,9 +29,52 @@ npm start
 http://localhost:3000
 ```
 
+## Deployment to Cloudflare
+
+### 1. Deploy Static Files to Cloudflare Pages
+
+1. Push your code to GitHub/GitLab.
+2. Go to Cloudflare Dashboard > Pages.
+3. Create a new project and connect your repository.
+4. Set build settings:
+   - Build command: (leave empty)
+   - Build output directory: `public`
+5. Deploy the Pages site.
+
+### 2. Deploy API and WebSocket to Cloudflare Workers
+
+1. Install Wrangler (if not already):
+```bash
+npm install -g wrangler
+```
+
+2. Authenticate with Cloudflare:
+```bash
+wrangler auth login
+```
+
+3. Create KV namespace:
+```bash
+wrangler kv:namespace create "PAINTBOARD_KV"
+```
+   Copy the namespace ID and update `wrangler.toml`.
+
+4. Deploy the Worker:
+```bash
+wrangler deploy
+```
+
+5. Update `public/app.js`:
+   - Set `API_BASE` to your Workers URL, e.g., `https://your-worker.your-account.workers.dev`
+
+### 3. Access Your App
+
+- Static files: `https://your-pages-site.pages.dev`
+- API/WebSocket: `https://your-worker.your-account.workers.dev`
+
 ## Configuration
 
-Edit `config.json` to customize:
+Edit `config.json` to customize (for local dev). For production, config is stored in KV.
 
 - `canvasWidth`: Width of the canvas in pixels
 - `canvasHeight`: Height of the canvas in pixels
@@ -43,12 +86,12 @@ Edit `config.json` to customize:
 
 ```json
 {
-  "canvasWidth": 100,
-  "canvasHeight": 100,
-  "cooldownSeconds": 30,
+  "canvasWidth": 960,
+  "canvasHeight": 540,
+  "cooldownSeconds": 0,
   "port": 3000,
-  "adminUsername": "admin",
-  "adminPassword": "paintboard123",
+  "adminUsername": "ED_Builder",
+  "adminPassword": "38e1e42867ab1f8a4d61a82da3b318703b4e6d93eb503e4e3ce994637fa1d19041c6ce332278f0655a060e043aed24163a0c26ce0d4546dbc092c6b4ae0f0dff",
   "invitationCodes": [
     "INVITE2024",
     "DEMO1234",
@@ -80,7 +123,7 @@ The admin panel allows you to:
 - Delete existing invitation codes
 - Update the cooldown time
 
-Open `http://localhost:3000/admin` and authenticate with the configured username and password to access these features.
+Open `/admin` and authenticate with the configured username and password to access these features.
 
 ## API Endpoints
 
@@ -113,7 +156,7 @@ Open `http://localhost:3000/admin` and authenticate with the configured username
 Connect to the WebSocket server to receive real-time canvas updates:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:3000');
+const ws = new WebSocket('wss://your-worker.your-account.workers.dev/ws');
 
 ws.onmessage = (event) => {
   const message = JSON.parse(event.data);
