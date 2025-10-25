@@ -5,12 +5,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Handle static files
-    if (url.pathname.startsWith('/public/') || url.pathname === '/' || url.pathname.startsWith('/admin/')) {
-      return handleStatic(request, env);
-    }
-
-    // API routes
+    // API routes first (before assets to avoid body consumption)
     if (url.pathname.startsWith('/api/')) {
       return handleAPI(request, env);
     }
@@ -25,7 +20,17 @@ export default {
       const id = env.WEBSOCKET_HANDLER.idFromName('main');
       const stub = env.WEBSOCKET_HANDLER.get(id);
 
-      return stub.webSocketHandler(request);
+      return stub.fetch(request);
+    }
+
+    // Try to serve static assets
+    try {
+      const assetResponse = await env.ASSETS.fetch(request);
+      if (assetResponse.status !== 404) {
+        return assetResponse;
+      }
+    } catch (e) {
+      // Assets not available, continue
     }
 
     return new Response('Not found', { status: 404 });
@@ -33,12 +38,6 @@ export default {
 };
 
 export { WebSocketHandler };
-
-async function handleStatic(request, env) {
-  // Static files should be served via Cloudflare Pages
-  // If you want to serve them from Workers, upload to KV or embed in code
-  return new Response('Static files should be served from Pages', { status: 404 });
-}
 
 async function handleAPI(request, env) {
   const url = new URL(request.url);
@@ -89,7 +88,13 @@ async function handleAPI(request, env) {
 }
 
 async function generateToken(request, env) {
-  const { invitationCode } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { invitationCode } = body;
 
   if (!invitationCode) {
     return Response.json({ error: '请填写邀请码' }, { status: 400 });
@@ -101,7 +106,7 @@ async function generateToken(request, env) {
   }
 
   // Check recent usage
-  const tokens = await env.PAINTBOARD_KV.get('tokens', { type: 'json' }) || {};
+  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
   const now = Date.now();
   const oneHourAgo = now - 3600000;
   for (const [token, data] of Object.entries(tokens)) {
@@ -111,20 +116,26 @@ async function generateToken(request, env) {
   }
 
   const token = crypto.randomUUID();
-  tokens[token] = { inviteCode, createdAt: now };
-  await env.PAINTBOARD_KV.put('tokens', JSON.stringify(tokens));
+  tokens[token] = { inviteCode: invitationCode, createdAt: now };
+  await env.ED_PB_KV.put('tokens', JSON.stringify(tokens));
 
   return Response.json({ token });
 }
 
 async function validateToken(request, env) {
-  const { token } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { token } = body;
 
   if (!token) {
     return Response.json({ error: '请填写 token' }, { status: 400 });
   }
 
-  const tokens = await env.PAINTBOARD_KV.get('tokens', { type: 'json' }) || {};
+  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
   if (!tokens[token]) {
     return Response.json({ error: '此 token 无效！' }, { status: 403 });
   }
@@ -133,9 +144,15 @@ async function validateToken(request, env) {
 }
 
 async function drawPixel(request, env) {
-  const { token, x, y, color } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { token, x, y, color } = body;
 
-  const tokens = await env.PAINTBOARD_KV.get('tokens', { type: 'json' }) || {};
+  const tokens = await env.ED_PB_KV.get('tokens', { type: 'json' }) || {};
   if (!tokens[token]) {
     return Response.json({ error: '此 token 无效！' }, { status: 403 });
   }
@@ -149,7 +166,7 @@ async function drawPixel(request, env) {
     return Response.json({ error: '颜色格式错误，请使用 HEX 十六进制颜色格式' }, { status: 400 });
   }
 
-  const cooldowns = await env.PAINTBOARD_KV.get('cooldowns', { type: 'json' }) || {};
+  const cooldowns = await env.ED_PB_KV.get('cooldowns', { type: 'json' }) || {};
   const now = Date.now();
   const lastDraw = cooldowns[token];
   const cooldownMs = config.cooldownSeconds * 1000;
@@ -159,13 +176,13 @@ async function drawPixel(request, env) {
     return Response.json({ error: '绘画冷却中……', remainingSeconds }, { status: 429 });
   }
 
-  const canvas = await env.PAINTBOARD_KV.get('canvas', { type: 'json' }) || {};
+  const canvas = await env.ED_PB_KV.get('canvas', { type: 'json' }) || {};
   const key = `${x},${y}`;
   canvas[key] = color.toUpperCase();
-  await env.PAINTBOARD_KV.put('canvas', JSON.stringify(canvas));
+  await env.ED_PB_KV.put('canvas', JSON.stringify(canvas));
 
   cooldowns[token] = now;
-  await env.PAINTBOARD_KV.put('cooldowns', JSON.stringify(cooldowns));
+  await env.ED_PB_KV.put('cooldowns', JSON.stringify(cooldowns));
 
   // Broadcast
   const id = env.WEBSOCKET_HANDLER.idFromName('main');
@@ -177,7 +194,7 @@ async function drawPixel(request, env) {
 
 async function getCanvas(request, env) {
   const config = await getConfigFromKV(env);
-  const canvas = await env.PAINTBOARD_KV.get('canvas', { type: 'json' }) || {};
+  const canvas = await env.ED_PB_KV.get('canvas', { type: 'json' }) || {};
 
   return Response.json({
     width: config.canvasWidth,
@@ -201,7 +218,13 @@ async function getInvitationCodes(request, env) {
 }
 
 async function addInvitationCode(request, env) {
-  const { code } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { code } = body;
 
   if (!code) {
     return Response.json({ error: '请填写邀请码' }, { status: 400 });
@@ -213,7 +236,7 @@ async function addInvitationCode(request, env) {
   }
 
   config.invitationCodes.push(code);
-  await env.PAINTBOARD_KV.put('config', JSON.stringify(config));
+  await env.ED_PB_KV.put('config', JSON.stringify(config));
 
   return Response.json({ success: true, invitationCodes: config.invitationCodes });
 }
@@ -226,13 +249,19 @@ async function deleteInvitationCode(request, env, code) {
   }
 
   config.invitationCodes.splice(index, 1);
-  await env.PAINTBOARD_KV.put('config', JSON.stringify(config));
+  await env.ED_PB_KV.put('config', JSON.stringify(config));
 
   return Response.json({ success: true, invitationCodes: config.invitationCodes });
 }
 
 async function updateCooldown(request, env) {
-  const { cooldownSeconds } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { cooldownSeconds } = body;
 
   if (typeof cooldownSeconds !== 'number' || cooldownSeconds < 0) {
     return Response.json({ error: '无效的冷却时间' }, { status: 400 });
@@ -240,7 +269,7 @@ async function updateCooldown(request, env) {
 
   const config = await getConfigFromKV(env);
   config.cooldownSeconds = cooldownSeconds;
-  await env.PAINTBOARD_KV.put('config', JSON.stringify(config));
+  await env.ED_PB_KV.put('config', JSON.stringify(config));
 
   return Response.json({ success: true, cooldownSeconds });
 }
@@ -260,7 +289,7 @@ async function checkAdminAuth(auth, env) {
 }
 
 async function getConfigFromKV(env) {
-  let config = await env.PAINTBOARD_KV.get('config', { type: 'json' });
+  let config = await env.ED_PB_KV.get('config', { type: 'json' });
   if (!config) {
     // Initialize default config
     config = {
@@ -271,7 +300,7 @@ async function getConfigFromKV(env) {
       adminPassword: '38e1e42867ab1f8a4d61a82da3b318703b4e6d93eb503e4e3ce994637fa1d19041c6ce332278f0655a060e043aed24163a0c26ce0d4546dbc092c6b4ae0f0dff',
       invitationCodes: ['INVITE2024', 'DEMO1234', 'TEST5678']
     };
-    await env.PAINTBOARD_KV.put('config', JSON.stringify(config));
+    await env.ED_PB_KV.put('config', JSON.stringify(config));
   }
   return config;
 }

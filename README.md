@@ -29,9 +29,33 @@ npm start
 http://localhost:3000
 ```
 
-## Deployment to Cloudflare
+## Deployment to Cloudflare (Web Interface)
 
-### 1. Deploy Static Files to Cloudflare Pages
+### Option 1: Full Deployment via Cloudflare Workers (Recommended)
+
+This project is configured to deploy entirely on Cloudflare Workers using the web interface:
+
+1. **Push code to GitHub**: Ensure your repository is on GitHub with the latest changes.
+
+2. **Create Worker from Git**:
+   - Go to Cloudflare Dashboard > Workers & Pages > Create application > Create Worker.
+   - Select "From Git" and connect your GitHub repository.
+   - Select the main branch and set:
+     - Build command: `npm run build` (or leave empty as no build is needed)
+     - Destination directory: (leave empty)
+   - The system will automatically detect `wrangler.toml` and deploy.
+
+3. **Configure Bindings**:
+   - KV Namespace: Ensure `ED_PB_KV` is created and bound.
+   - Durable Objects: `WEBSOCKET_HANDLER` will be created automatically.
+
+4. **Access your app**: The Worker URL will serve both static files and API endpoints.
+
+### Option 2: Separate Pages and Workers
+
+If you prefer separate deployments:
+
+#### Deploy Static Files to Cloudflare Pages
 
 1. Push your code to GitHub/GitLab.
 2. Go to Cloudflare Dashboard > Pages.
@@ -41,7 +65,7 @@ http://localhost:3000
    - Build output directory: `public`
 5. Deploy the Pages site.
 
-### 2. Deploy API and WebSocket to Cloudflare Workers
+#### Deploy API and WebSocket to Cloudflare Workers
 
 1. Install Wrangler (if not already):
 ```bash
