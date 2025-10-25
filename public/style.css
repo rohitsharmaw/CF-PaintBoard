@@ -183,23 +183,26 @@ button:hover {
 
 .control-group label {
     font-weight: bold;
-    color: #333;
+    color: #e0e0e0;
 }
 
 #colorPicker {
     width: 60px;
     height: 40px;
-    border: 2px solid #ddd;
+    border: 2px solid #444;
     border-radius: 8px;
     cursor: pointer;
+    background: #23272f;
 }
 
 #colorHex {
     width: 100px;
     padding: 8px;
-    border: 2px solid #ddd;
+    border: 2px solid #444;
     border-radius: 8px;
     font-family: monospace;
+    background: #181a20;
+    color: #e0e0e0;
 }
 
 #cooldownStatus {
@@ -215,6 +218,7 @@ button:hover {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
     max-width: 80vw;
     max-height: 80vh;
+    background: #23272f;
 }
 
 #canvas {
@@ -238,10 +242,14 @@ button:hover {
 /* Admin Panel */
 .admin-panel {
     text-align: left;
+    background: #23272f;
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(31, 56, 88, 0.25);
+    padding: 32px;
 }
 
 .admin-panel h2 {
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 20px;
 }
 
@@ -253,7 +261,7 @@ button:hover {
 }
 
 .admin-section h3 {
-    color: #667eea;
+    color: #3b60e4;
     margin-bottom: 15px;
 }
 
@@ -278,6 +286,9 @@ button:hover {
     background: #e74c3c;
     padding: 8px 16px;
     font-size: 14px;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
 }
 
 #inviteCodesList button:hover {
