@@ -20,3 +20,5 @@ allow = ["rpc"]
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["WebSocketHandler"]
+
+route = "pb.ed-builder.top/*"

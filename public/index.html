@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>ED-PaintBoard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -11,27 +11,33 @@
     <div class="container">
         <header>
             <h1>🎨 ED-PaintBoard</h1>
-            <p>一起来占领画布吧！</p>
+            <p>Here we go!</p>
         </header>
-
-        <!-- Token Section -->
         <div class="token-section" id="tokenSection">
             <h2>开始使用</h2>
-            <p class="token-hint">您可以在没有 token 的情况下观看画布。准备好绘画时，请在下面生成一个。</p>
-            <div class="input-group">
+            <p class="token-hint">您可以在没有 token 的情况下观看绘板。准备好绘画时，请选择一种方式获取 token：</p>
+            <div class="strategy-group">
+                <label><input type="radio" name="tokenStrategy" value="invite" checked onclick="switchTokenStrategy('invite')"> 通过邀请码生成 token</label>
+                <label><input type="radio" name="tokenStrategy" value="input" onclick="switchTokenStrategy('input')"> 使用已有 token</label>
+            </div>
+            <div class="input-group" id="inviteGroup">
                 <input type="text" id="invitationCode" placeholder="输入邀请码">
                 <button onclick="generateToken()">生成 Token</button>
             </div>
+            <div class="input-group hidden" id="inputTokenGroup">
+                <input type="text" id="inputToken" placeholder="输入已有 token">
+                <button onclick="submitToken()">提交 Token</button>
+            </div>
             <div id="tokenDisplay" class="hidden">
-                <p>您的 token：</p>
+                <p class="center">邀请码校验成功！</p>
                 <div class="token-box">
+                    <p class="center">您的邀请码在接下来的 <span id="resetSeconds">T</span> 秒内只能生成 <span id="remainingGenerations">X</span> 次 token，请妥善保存您的 token</p>
+                    <br>
                     <code id="tokenValue"></code>
                     <button onclick="copyToken()">复制</button>
                 </div>
             </div>
         </div>
-
-        <!-- Canvas Section -->
         <div class="canvas-section" id="canvasSection">
             <div class="controls">
                 <div class="control-group">
@@ -53,6 +59,14 @@
                 <p>点击画布进行绘制一个像素。冷却时间: <span id="cooldownTime">30</span> 秒</p>
                 <p>画布大小: <span id="canvasSize">100x100</span></p>
             </div>
+        </div>
+        <hr>
+        <div class="center">
+            <footer>
+                <p>Designed with Love by <a href="https://www.luogu.com.cn/user/1023494">ED_Builder</a> & <a href="https://github.com/rohitsharmaw">rohitsharmaw</a></p>
+                <p>GitHub: <a href="https://github.com/rohitsharmaw/ED-PaintBoard">rohitsharmaw/ED-PaintBoard</a></p>
+                <p>API Docs: <a href="https://ed-builder.top">ED-Blog</a></p>
+            </footer>
         </div>
     </div>
 

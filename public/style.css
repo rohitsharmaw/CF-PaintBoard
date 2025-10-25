@@ -4,6 +4,43 @@
     box-sizing: border-box;
 }
 
+a
+{
+    color: #2498db;
+    text-decoration: none;
+    position: relative;
+}
+a::after
+{
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #2498db;
+    transform-origin: bottom right;
+    transition: transform 0.25s ease-out;
+}
+a:hover::after
+{
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+.center
+{
+    text-align: center;
+}
+
+hr
+{
+    margin: 30px 0;
+    border: none;
+    border-top: 1px solid #8e44da;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

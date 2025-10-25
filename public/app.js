@@ -1,10 +1,52 @@
 // Global variables
+// 策略切换
+function switchTokenStrategy(strategy) {
+    const inviteGroup = document.getElementById('inviteGroup');
+    const inputTokenGroup = document.getElementById('inputTokenGroup');
+    if (strategy === 'invite') {
+        inviteGroup.classList.remove('hidden');
+        inputTokenGroup.classList.add('hidden');
+    } else {
+        inviteGroup.classList.add('hidden');
+        inputTokenGroup.classList.remove('hidden');
+    }
+}
+
+// 提交已有 token 并鉴权
+async function submitToken() {
+    const inputToken = document.getElementById('inputToken').value.trim();
+    if (!inputToken) {
+        alert('请输入 token');
+        return;
+    }
+    try {
+        const response = await fetch(`${API_BASE}/api/validate-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: inputToken })
+        });
+        const data = await response.json();
+        if (response.ok && data.valid) {
+            currentToken = inputToken;
+            lastTokenSource = 'input';
+            localStorage.setItem('paintboardToken', currentToken);
+            updateTokenDisplay();
+            alert('Token 验证成功，可以开始绘画！');
+        } else {
+            alert(data.error || 'Token 无效');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Token 验证失败');
+    }
+}
 let canvas, ctx;
 let ws;
 let currentToken = localStorage.getItem('paintboardToken');
 let config = { cooldownSeconds: 30, canvasWidth: 100, canvasHeight: 100 };
 let cooldownEnd = 0;
 let cooldownInterval;
+let lastTokenSource = null; // 'invite' | 'input'
 
 // API base URL - change this to your Workers URL if static files are served separately
 const API_BASE = '';  // e.g., 'https://your-worker.your-account.workers.dev'
@@ -13,6 +55,9 @@ const API_BASE = '';  // e.g., 'https://your-worker.your-account.workers.dev'
 window.onload = async () => {
     setupColorSync();
     updateTokenDisplay();
+
+    // 默认显示邀请码方式
+    switchTokenStrategy('invite');
 
     await loadCanvas();
 
@@ -49,38 +94,53 @@ function updateTokenDisplay() {
         return;
     }
 
-    if (currentToken) {
+    if (currentToken && lastTokenSource === 'invite') {
         tokenValueElement.textContent = currentToken;
         tokenDisplayElement.classList.remove('hidden');
     } else {
         tokenValueElement.textContent = '';
         tokenDisplayElement.classList.add('hidden');
+        // 清除 token 时，回到策略选择界面
+        switchTokenStrategy(document.querySelector('input[name="tokenStrategy"]:checked').value);
     }
+}
+
+function logout() {
+    localStorage.removeItem('paintboardToken');
+    currentToken = null;
+    updateTokenDisplay();
+    alert('已清除 token，可以重新选择获取方式。');
 }
 
 // Token generation
 async function generateToken() {
     const invitationCode = document.getElementById('invitationCode').value.trim();
-    
     if (!invitationCode) {
         alert('请输入邀请码');
         return;
     }
-    
     try {
         const response = await fetch(`${API_BASE}/api/generate-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ invitationCode })
         });
-        
         const data = await response.json();
-        
         if (response.ok) {
             currentToken = data.token;
+            lastTokenSource = 'invite';
             localStorage.setItem('paintboardToken', currentToken);
             updateTokenDisplay();
+            // token-box显示后再赋值T/X，确保渲染
+            setTimeout(() => {
+                document.getElementById('resetSeconds').textContent = data.resetIn ?? 'T';
+                document.getElementById('remainingGenerations').textContent = data.leftCount ?? 'X';
+            }, 50);
         } else {
+            if (typeof data.resetIn !== 'undefined' && typeof data.leftCount !== 'undefined') {
+                document.getElementById('resetSeconds').textContent = data.resetIn;
+                document.getElementById('remainingGenerations').textContent = data.leftCount;
+            }
             alert(data.error || '生成 token 失败');
         }
     } catch (error) {

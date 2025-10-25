@@ -102,41 +102,45 @@ function broadcast(message) {
 }
 
 // API: Generate token with invitation code
+// 限流缓存结构：Map<code, { windowStart, count }>
+const inviteRateLimit = new Map();
+
 app.post('/api/generate-token', (req, res) => {
   const { invitationCode } = req.body;
-  
   if (!invitationCode) {
     return res.status(400).json({ error: '请填写邀请码' });
   }
-  
-  // Reload config to get latest invitation codes
   reloadConfig();
-  
-  if (!config.invitationCodes.includes(invitationCode)) {
+  // 查找邀请码对象
+  const inviteObj = config.invitationCodes.find(obj => obj.code === invitationCode);
+  if (!inviteObj) {
     return res.status(403).json({ error: '邀请码无效！' });
   }
-  
-  // Check if this invitation code has been used in the last hour
   const now = Date.now();
-  const oneHourAgo = now - 3600000; // 1 hour in milliseconds
-  let hasRecentToken = false;
-  for (const [token, data] of tokens) {
-    if (data.inviteCode === invitationCode && data.createdAt > oneHourAgo) {
-      hasRecentToken = true;
-      break;
+  // 获取限流参数
+  const { timeWindow, maxCount } = inviteObj;
+  // 获取当前邀请码的限流状态
+  let rate = inviteRateLimit.get(invitationCode);
+  if (!rate || now - rate.windowStart >= timeWindow * 1000) {
+    // 新窗口或首次使用，重置计数
+    rate = { windowStart: now, count: 0 };
+  }
+  // 统计当前窗口内已生成 token 数
+    const leftCount = maxCount - rate.count;
+    const resetIn = Math.ceil((rate.windowStart + timeWindow * 1000 - now) / 1000);
+    if (leftCount <= 0) {
+      return res.status(429).json({ error: `此邀请码在本时段已达最大使用次数，请 ${resetIn} 秒后再试。`, resetIn, leftCount: 0 });
     }
-  }
-  if (hasRecentToken) {
-    return res.status(429).json({ error: '此邀请码在过去1小时内已被使用，请稍后再试。' });
-  }
-  
+  // 生成 token
   const token = uuidv4();
   tokens.set(token, {
     inviteCode: invitationCode,
-    createdAt: Date.now()
+    createdAt: now
   });
-  
-  res.json({ token });
+  // 更新计数
+  rate.count++;
+  inviteRateLimit.set(invitationCode, rate);
+    res.json({ token, resetIn, leftCount });
 });
 
 // API: Validate token
@@ -234,20 +238,15 @@ app.get('/api/admin/invitation-codes', (req, res) => {
 
 // Admin API: Add invitation code
 app.post('/api/admin/invitation-codes', (req, res) => {
-  const { code } = req.body;
-  
-  if (!code) {
-    return res.status(400).json({ error: '请填写邀请码' });
+  const { code, timeWindow, maxCount } = req.body;
+  if (!code || typeof timeWindow !== 'number' || typeof maxCount !== 'number') {
+    return res.status(400).json({ error: '请填写完整的邀请码参数' });
   }
-  
   reloadConfig();
-  
-  if (config.invitationCodes.includes(code)) {
+  if (config.invitationCodes.find(obj => obj.code === code)) {
     return res.status(400).json({ error: '该邀请码已存在' });
   }
-  
-  config.invitationCodes.push(code);
-  
+  config.invitationCodes.push({ code, timeWindow, maxCount });
   if (saveConfig()) {
     res.json({ success: true, invitationCodes: config.invitationCodes });
   } else {
@@ -258,16 +257,12 @@ app.post('/api/admin/invitation-codes', (req, res) => {
 // Admin API: Delete invitation code
 app.delete('/api/admin/invitation-codes/:code', (req, res) => {
   const { code } = req.params;
-  
   reloadConfig();
-  
-  const index = config.invitationCodes.indexOf(code);
+  const index = config.invitationCodes.findIndex(obj => obj.code === code);
   if (index === -1) {
     return res.status(404).json({ error: '未找到该邀请码' });
   }
-  
   config.invitationCodes.splice(index, 1);
-  
   if (saveConfig()) {
     res.json({ success: true, invitationCodes: config.invitationCodes });
   } else {
