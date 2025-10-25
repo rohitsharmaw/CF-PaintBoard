@@ -19,4 +19,4 @@ allow = ["rpc"]
 
 [[migrations]]
 tag = "v1"
-new_classes = ["WebSocketHandler"]
+new_sqlite_classes = ["WebSocketHandler"]
