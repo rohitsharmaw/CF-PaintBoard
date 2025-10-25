@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ED-PaintBoard | ADMIN</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+    <div class="container">
+        <h1>ED-aintBoard Admin</h1>
+        <p class="description">管理邀请码和冷却时间</p>
+        <section>
+            <h2>邀请码</h2>
+            <div class="input-group">
+                <input type="text" id="newInviteCode" placeholder="输入新的邀请码">
+                <button type="button" onclick="addInviteCode()">添加邀请码</button>
+            </div>
+            <ul id="inviteCodesList"></ul>
+        </section>
+        <section>
+            <h2>冷却时间</h2>
+            <div class="input-group">
+                <input type="number" id="cooldownInput" min="0" value="30">
+                <button type="button" onclick="updateCooldown()">更新冷却时间</button>
+            </div>
+        </section>
+        <button class="secondary" type="button" onclick="window.location.href='/'">返回画板</button>
+        <p class="footer-note">关闭浏览器标签以结束管理员会话。基本身份验证凭据可能会被浏览器缓存。</p>
+        <div id="status" class="status"></div>
+    </div>
+    <script src="./admin.js"></script>
+</body>
+</html>
