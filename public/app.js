@@ -49,7 +49,7 @@ let cooldownInterval;
 let lastTokenSource = null; // 'invite' | 'input'
 
 // API base URL - change this to your Workers URL if static files are served separately
-const API_BASE = '';  // e.g., 'https://your-worker.your-account.workers.dev'
+const API_BASE = 'https://pb.ed-builder.top';  // e.g., 'https://your-worker.your-account.workers.dev'
 
 // Initialize on page load
 window.onload = async () => {
