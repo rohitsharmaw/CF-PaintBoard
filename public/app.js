@@ -60,7 +60,7 @@ async function generateToken() {
     const invitationCode = document.getElementById('invitationCode').value.trim();
     
     if (!invitationCode) {
-        alert('Please enter an invitation code');
+        alert('请输入邀请码');
         return;
     }
     
@@ -78,22 +78,22 @@ async function generateToken() {
             localStorage.setItem('paintboardToken', currentToken);
             updateTokenDisplay();
         } else {
-            alert(data.error || 'Failed to generate token');
+            alert(data.error || '生成 token 失败');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Failed to generate token');
+        alert('生成 token 失败');
     }
 }
 
 function copyToken() {
     const tokenValue = document.getElementById('tokenValue').textContent;
     if (!tokenValue) {
-        alert('No token available. Generate one first.');
+        alert('没有可用的 token。请先生成一个。');
         return;
     }
     navigator.clipboard.writeText(tokenValue).then(() => {
-        alert('Token copied to clipboard!');
+        alert('Token 已复制到剪贴板！');
     });
 }
 
@@ -145,8 +145,8 @@ async function loadCanvas() {
         // Connect WebSocket
         connectWebSocket();
     } catch (error) {
-        console.error('Error loading canvas:', error);
-        alert('Failed to load canvas');
+        console.error('加载 Canvas 时发生错误：', error);
+        alert('加载 Canvas 失败！');
     }
 }
 
@@ -159,10 +159,30 @@ function setupCanvas(width, height) {
     canvas.height = height * pixelSize;
     
     canvas.onclick = handleCanvasClick;
+    
+    // Resize canvas to fit container
+    resizeCanvas();
+    
+    // Add resize listener
+    window.addEventListener('resize', resizeCanvas);
+}
+
+function resizeCanvas() {
+    if (!canvas) return;
+    
+    const container = document.querySelector('.canvas-container');
+    const containerRect = container.getBoundingClientRect();
+    
+    const scaleX = containerRect.width / canvas.width;
+    const scaleY = containerRect.height / canvas.height;
+    const scale = Math.min(scaleX, scaleY);
+    
+    canvas.style.width = (canvas.width * scale) + 'px';
+    canvas.style.height = (canvas.height * scale) + 'px';
 }
 
 function drawAllPixels(pixels) {
-    const pixelSize = canvas.width / config.canvasWidth;
+    const pixelSize = 5; // Internal pixel size
     
     for (let key in pixels) {
         const [x, y] = key.split(',').map(Number);
@@ -174,27 +194,27 @@ function drawAllPixels(pixels) {
 }
 
 function drawPixel(x, y, color) {
-    const pixelSize = canvas.width / config.canvasWidth;
+    const pixelSize = 5; // Internal pixel size
     ctx.fillStyle = color;
     ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
 }
 
 async function handleCanvasClick(event) {
     const rect = canvas.getBoundingClientRect();
-    const pixelSize = canvas.width / config.canvasWidth;
+    const displayPixelSize = rect.width / config.canvasWidth;
     
-    const x = Math.floor((event.clientX - rect.left) / pixelSize);
-    const y = Math.floor((event.clientY - rect.top) / pixelSize);
+    const x = Math.floor((event.clientX - rect.left) / displayPixelSize);
+    const y = Math.floor((event.clientY - rect.top) / displayPixelSize);
     
     const color = document.getElementById('colorHex').value;
     
     if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
-        alert('Invalid color format. Please use HEX format like #FF0000');
+        alert('颜色格式错误，请使用 HEX 十六进制颜色格式');
         return;
     }
 
     if (!currentToken) {
-        alert('You need a valid token to draw. Generate one using an invitation code above.');
+        alert('您需要一个有效的 token 才能绘画。请使用上面的邀请码生成一个。');
         return;
     }
     
@@ -215,19 +235,19 @@ async function handleCanvasClick(event) {
         if (response.ok) {
             startCooldown(data.nextDrawIn);
         } else if (response.status === 429) {
-            alert(`Cooldown active. Wait ${data.remainingSeconds} seconds.`);
+            alert(`绘画冷却中……请等待 ${data.remainingSeconds} 秒。`);
             startCooldown(data.remainingSeconds);
         } else if (response.status === 403) {
-            alert((data && data.error) || 'Token is invalid. Please generate a new one.');
+            alert((data && data.error) || 'Token 无效。请生成一个新的。');
             localStorage.removeItem('paintboardToken');
             currentToken = null;
             updateTokenDisplay();
         } else {
-            alert(data.error || 'Failed to draw pixel');
+            alert(data.error || '绘制像素失败');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Failed to draw pixel');
+        alert('绘制像素失败！');
     }
 }
 
@@ -247,7 +267,7 @@ function updateCooldownDisplay() {
     
     if (remaining > 0) {
         document.getElementById('cooldownStatus').textContent = 
-            `Cooldown: ${remaining}s`;
+            `剩余冷却时间: ${remaining}s`;
     } else {
         document.getElementById('cooldownStatus').textContent = '';
         if (cooldownInterval) {
@@ -262,7 +282,7 @@ function connectWebSocket() {
     ws = new WebSocket(`${protocol}//${window.location.host}`);
     
     ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket 已连接');
     };
     
     ws.onmessage = (event) => {
@@ -276,12 +296,12 @@ function connectWebSocket() {
     };
     
     ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('WebSocket 已断连！3秒后重连……');
         setTimeout(connectWebSocket, 3000);
     };
     
     ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket 错误：', error);
     };
 }
 
@@ -291,4 +311,3 @@ function logout() {
     currentToken = null;
     updateTokenDisplay();
 }
-

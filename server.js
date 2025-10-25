@@ -4,6 +4,7 @@ const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Load configuration
 const configPath = path.join(__dirname, 'config.json');
@@ -21,13 +22,13 @@ app.use(express.static('public'));
 // Admin auth middleware
 function adminAuth(req, res, next) {
   if (!reloadConfig()) {
-    return res.status(500).send('Failed to load configuration');
+    return res.status(500).send('配置加载失败！');
   }
 
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Basic ')) {
     res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
-    return res.status(401).send('Authentication required');
+    return res.status(401).send('401 - 需要身份验证');
   }
 
   const encoded = header.split(' ')[1];
@@ -36,18 +37,18 @@ function adminAuth(req, res, next) {
 
   if (separatorIndex === -1) {
     res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
-    return res.status(401).send('Invalid authentication format');
+    return res.status(401).send('无效的身份验证格式');
   }
 
   const username = decoded.slice(0, separatorIndex);
   const password = decoded.slice(separatorIndex + 1);
 
-  if (username === config.adminUsername && password === config.adminPassword) {
+  if (username === config.adminUsername && crypto.createHash('sha512').update(password).digest('hex') === config.adminPassword) {
     return next();
   }
 
   res.set('WWW-Authenticate', 'Basic realm="PaintBoard Admin"');
-  return res.status(401).send('Invalid credentials');
+  return res.status(401).send('用户名或密码错误');
 }
 
 // Protected admin assets
@@ -72,10 +73,10 @@ function reloadConfig() {
   try {
     const newConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     config = newConfig;
-    console.log('Configuration reloaded');
+    console.log('配置已重新加载');
     return true;
   } catch (error) {
-    console.error('Error reloading config:', error);
+    console.error('重载配置时发生错误：', error);
     return false;
   }
 }
@@ -86,7 +87,7 @@ function saveConfig() {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     return true;
   } catch (error) {
-    console.error('Error saving config:', error);
+    console.error('保存配置时发生错误：', error);
     return false;
   }
 }
@@ -105,14 +106,28 @@ app.post('/api/generate-token', (req, res) => {
   const { invitationCode } = req.body;
   
   if (!invitationCode) {
-    return res.status(400).json({ error: 'Invitation code is required' });
+    return res.status(400).json({ error: '请填写邀请码' });
   }
   
   // Reload config to get latest invitation codes
   reloadConfig();
   
   if (!config.invitationCodes.includes(invitationCode)) {
-    return res.status(403).json({ error: 'Invalid invitation code' });
+    return res.status(403).json({ error: '邀请码无效！' });
+  }
+  
+  // Check if this invitation code has been used in the last hour
+  const now = Date.now();
+  const oneHourAgo = now - 3600000; // 1 hour in milliseconds
+  let hasRecentToken = false;
+  for (const [token, data] of tokens) {
+    if (data.inviteCode === invitationCode && data.createdAt > oneHourAgo) {
+      hasRecentToken = true;
+      break;
+    }
+  }
+  if (hasRecentToken) {
+    return res.status(429).json({ error: '此邀请码在过去1小时内已被使用，请稍后再试。' });
   }
   
   const token = uuidv4();
@@ -129,11 +144,11 @@ app.post('/api/validate-token', (req, res) => {
   const { token } = req.body;
   
   if (!token) {
-    return res.status(400).json({ error: 'Token is required' });
+    return res.status(400).json({ error: '请填写 token' });
   }
   
   if (!tokens.has(token)) {
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(403).json({ error: '此 token 无效！' });
   }
   
   res.json({ valid: true });
@@ -145,17 +160,17 @@ app.post('/api/draw', (req, res) => {
   
   // Validate token
   if (!token || !tokens.has(token)) {
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(403).json({ error: '此 token 无效！' });
   }
   
   // Validate coordinates
   if (x < 0 || x >= config.canvasWidth || y < 0 || y >= config.canvasHeight) {
-    return res.status(400).json({ error: 'Invalid coordinates' });
+    return res.status(400).json({ error: '绘画位置无效！' });
   }
   
   // Validate color (HEX format)
   if (!color || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
-    return res.status(400).json({ error: 'Invalid color format. Use HEX format like #FF0000' });
+    return res.status(400).json({ error: '颜色格式错误，请使用 HEX 十六进制颜色格式' });
   }
   
   // Check cooldown
@@ -166,7 +181,7 @@ app.post('/api/draw', (req, res) => {
   if (lastDraw && (now - lastDraw) < cooldownMs) {
     const remainingSeconds = Math.ceil((cooldownMs - (now - lastDraw)) / 1000);
     return res.status(429).json({ 
-      error: 'Cooldown active',
+      error: '绘画冷却中……',
       remainingSeconds
     });
   }
@@ -222,13 +237,13 @@ app.post('/api/admin/invitation-codes', (req, res) => {
   const { code } = req.body;
   
   if (!code) {
-    return res.status(400).json({ error: 'Code is required' });
+    return res.status(400).json({ error: '请填写邀请码' });
   }
   
   reloadConfig();
   
   if (config.invitationCodes.includes(code)) {
-    return res.status(400).json({ error: 'Code already exists' });
+    return res.status(400).json({ error: '该邀请码已存在' });
   }
   
   config.invitationCodes.push(code);
@@ -236,7 +251,7 @@ app.post('/api/admin/invitation-codes', (req, res) => {
   if (saveConfig()) {
     res.json({ success: true, invitationCodes: config.invitationCodes });
   } else {
-    res.status(500).json({ error: 'Failed to save configuration' });
+    res.status(500).json({ error: '保存配置时发生错误！' });
   }
 });
 
@@ -248,7 +263,7 @@ app.delete('/api/admin/invitation-codes/:code', (req, res) => {
   
   const index = config.invitationCodes.indexOf(code);
   if (index === -1) {
-    return res.status(404).json({ error: 'Code not found' });
+    return res.status(404).json({ error: '未找到该邀请码' });
   }
   
   config.invitationCodes.splice(index, 1);
@@ -256,7 +271,7 @@ app.delete('/api/admin/invitation-codes/:code', (req, res) => {
   if (saveConfig()) {
     res.json({ success: true, invitationCodes: config.invitationCodes });
   } else {
-    res.status(500).json({ error: 'Failed to save configuration' });
+    res.status(500).json({ error: '保存配置时发生错误！' });
   }
 });
 
@@ -265,7 +280,7 @@ app.put('/api/admin/cooldown', (req, res) => {
   const { cooldownSeconds } = req.body;
   
   if (typeof cooldownSeconds !== 'number' || cooldownSeconds < 0) {
-    return res.status(400).json({ error: 'Invalid cooldown value' });
+    return res.status(400).json({ error: '无效的冷却时间' });
   }
   
   reloadConfig();
@@ -274,7 +289,7 @@ app.put('/api/admin/cooldown', (req, res) => {
   if (saveConfig()) {
     res.json({ success: true, cooldownSeconds: config.cooldownSeconds });
   } else {
-    res.status(500).json({ error: 'Failed to save configuration' });
+    res.status(500).json({ error: '保存配置时发生错误！' });
   }
 });
 
@@ -291,7 +306,7 @@ wss.on('connection', (ws) => {
   }));
   
   ws.on('close', () => {
-    console.log('WebSocket connection closed');
+    console.log('WebSocket 连接已关闭！');
   });
 });
 

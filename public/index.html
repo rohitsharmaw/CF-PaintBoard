@@ -3,29 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PaintBoard - Collaborative Pixel Drawing</title>
+    <title>ED-PaintBoard</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎨 PaintBoard</h1>
-            <p>Collaborative Pixel Drawing Board</p>
+            <h1>🎨 ED-PaintBoard</h1>
+            <p>一起来占领画布吧！</p>
         </header>
 
         <!-- Token Section -->
         <div class="token-section" id="tokenSection">
-            <h2>Get Started</h2>
-            <p class="token-hint">You can watch the canvas without a token. Generate one below when you're ready to draw.</p>
+            <h2>开始使用</h2>
+            <p class="token-hint">您可以在没有 token 的情况下观看画布。准备好绘画时，请在下面生成一个。</p>
             <div class="input-group">
-                <input type="text" id="invitationCode" placeholder="Enter invitation code">
-                <button onclick="generateToken()">Generate Token</button>
+                <input type="text" id="invitationCode" placeholder="输入邀请码">
+                <button onclick="generateToken()">生成 Token</button>
             </div>
             <div id="tokenDisplay" class="hidden">
-                <p>Your token:</p>
+                <p>您的 token：</p>
                 <div class="token-box">
                     <code id="tokenValue"></code>
-                    <button onclick="copyToken()">Copy</button>
+                    <button onclick="copyToken()">复制</button>
                 </div>
             </div>
         </div>
@@ -34,7 +35,7 @@
         <div class="canvas-section" id="canvasSection">
             <div class="controls">
                 <div class="control-group">
-                    <label for="colorPicker">Color:</label>
+                    <label for="colorPicker">颜色:</label>
                     <input type="color" id="colorPicker" value="#000000">
                     <input type="text" id="colorHex" value="#000000" maxlength="7" pattern="#[0-9A-Fa-f]{6}">
                 </div>
@@ -42,15 +43,15 @@
                     <span id="cooldownStatus"></span>
                 </div>
                 <div class="control-group">
-                    <button onclick="logout()">Logout</button>
+                    <button onclick="logout()">清除 token</button>
                 </div>
             </div>
             <div class="canvas-container">
                 <canvas id="canvas"></canvas>
             </div>
             <div class="info">
-                <p>Click on a pixel to draw. Cooldown: <span id="cooldownTime">30</span> seconds</p>
-                <p>Canvas size: <span id="canvasSize">100x100</span></p>
+                <p>点击画布进行绘制一个像素。冷却时间: <span id="cooldownTime">30</span> 秒</p>
+                <p>画布大小: <span id="canvasSize">100x100</span></p>
             </div>
         </div>
     </div>

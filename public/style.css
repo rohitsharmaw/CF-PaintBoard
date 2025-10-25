@@ -19,7 +19,6 @@ body {
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     padding: 30px;
-    max-width: 900px;
     width: 100%;
 }
 
@@ -173,6 +172,8 @@ button:hover {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    max-width: 80vw;
+    max-height: 80vh;
 }
 
 #canvas {

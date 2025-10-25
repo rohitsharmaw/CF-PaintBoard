@@ -1,14 +1,13 @@
 {
-  "canvasWidth": 100,
-  "canvasHeight": 100,
-  "cooldownSeconds": 30,
+  "canvasWidth": 960,
+  "canvasHeight": 540,
+  "cooldownSeconds": 0,
   "port": 3000,
-  "adminUsername": "admin",
-  "adminPassword": "paintboard123",
+  "adminUsername": "ED_Builder",
+  "adminPassword": "38e1e42867ab1f8a4d61a82da3b318703b4e6d93eb503e4e3ce994637fa1d19041c6ce332278f0655a060e043aed24163a0c26ce0d4546dbc092c6b4ae0f0dff",
   "invitationCodes": [
     "INVITE2024",
     "DEMO1234",
-    "TEST5678",
-    "NEWCODE2024"
+    "TEST5678"
   ]
 }
