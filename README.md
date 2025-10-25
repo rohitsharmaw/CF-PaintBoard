@@ -1,195 +1,31 @@
-# PaintBoard
+本项目由于作者的 Cloudflare 账号无法承受过高负载而停止更新。
 
-A collaborative pixel drawing board with token-based authentication and real-time updates.
+# CF-PaintBoard
+提示：本项目由 GitHub Copilot Agent 编写！
 
-## Features
+## 部署方法
+1. fork 本仓库
+2. 在 `/src/index.js` 中找到 `API_BASE`，修改为你的域名
+3. 修改 `/wrangler.toml`
+4. 在 Cloudflare 连接到你 fork 的仓库
+5. 构建命令为 `npm install`
+6. 开始使用
 
-- 🎨 Draw pixels on a shared canvas with custom HEX colors
-- 👀 View the live canvas without signing in; tokens are only required to draw
-- 🔐 Token-based authentication using invitation codes
-- ⏱️ Configurable cooldown system (default: 30 seconds)
-- 🔄 Real-time canvas updates via WebSocket
-- 👨‍💼 Admin panel for managing invitation codes and settings (protected with Basic Auth)
-- 📝 Configuration file for easy customization
+请注意：每次像素点的绘画和邀请码、token操作都会对 KV 进行读取操作。请检查你的 KV 计划是否能够应对接下来的负载！
+## 管理后台
+初始的用户名为 `PaintBoard`，密码为 `PB123`  
+密码基于 SHA-512 编码，输入时进行比对。  
+如果你需要修改初始值，请在 `/src/index.js` 中的 `getConfigFromKV` 函数修改初始配置
 
-## Installation (Local Development)
+管理后台基于 Web Basic Authentication，密码可能会在浏览器被缓存
 
-1. Install dependencies:
-```bash
-npm install
-```
+在管理后台中可以修改冷却时间（精确到秒）和生成、撤销邀请码（可以设置最大使用次数和重置周期，可以显示当前周期内还能使用的次数）  
+但是画布的大小需要修改配置文件。
+## 主页绘画
+顶端有两种选项可供用户选择：使用邀请码生成新的 token 或使用现有的 token
 
-2. Start the server:
-```bash
-npm start
-```
+如果使用邀请码生成新的 token，生成成功后会显示接下来的时间内可以重新生成的次数，并提醒复制
 
-3. Open your browser and navigate to:
-```
-http://localhost:3000
-```
+如果使用现有 token 则会识别是否有效，然后使用这个 token 进行绘画
 
-## Deployment to Cloudflare (Web Interface)
-
-### Option 1: Full Deployment via Cloudflare Workers (Recommended)
-
-This project is configured to deploy entirely on Cloudflare Workers using the web interface:
-
-1. **Push code to GitHub**: Ensure your repository is on GitHub with the latest changes.
-
-2. **Create Worker from Git**:
-   - Go to Cloudflare Dashboard > Workers & Pages > Create application > Create Worker.
-   - Select "From Git" and connect your GitHub repository.
-   - Select the main branch and set:
-     - Build command: `npm run build` (or leave empty as no build is needed)
-     - Destination directory: (leave empty)
-   - The system will automatically detect `wrangler.toml` and deploy.
-
-3. **Configure Bindings**:
-   - KV Namespace: Ensure `ED_PB_KV` is created and bound.
-   - Durable Objects: `WEBSOCKET_HANDLER` will be created automatically.
-
-4. **Access your app**: The Worker URL will serve both static files and API endpoints.
-
-### Option 2: Separate Pages and Workers
-
-If you prefer separate deployments:
-
-#### Deploy Static Files to Cloudflare Pages
-
-1. Push your code to GitHub/GitLab.
-2. Go to Cloudflare Dashboard > Pages.
-3. Create a new project and connect your repository.
-4. Set build settings:
-   - Build command: (leave empty)
-   - Build output directory: `public`
-5. Deploy the Pages site.
-
-#### Deploy API and WebSocket to Cloudflare Workers
-
-1. Install Wrangler (if not already):
-```bash
-npm install -g wrangler
-```
-
-2. Authenticate with Cloudflare:
-```bash
-wrangler auth login
-```
-
-3. Create KV namespace:
-```bash
-wrangler kv:namespace create "PAINTBOARD_KV"
-```
-   Copy the namespace ID and update `wrangler.toml`.
-
-4. Deploy the Worker:
-```bash
-wrangler deploy
-```
-
-5. Update `public/app.js`:
-   - Set `API_BASE` to your Workers URL, e.g., `https://your-worker.your-account.workers.dev`
-
-### 3. Access Your App
-
-- Static files: `https://your-pages-site.pages.dev`
-- API/WebSocket: `https://your-worker.your-account.workers.dev`
-
-## Configuration
-
-Edit `config.json` to customize (for local dev). For production, config is stored in KV.
-
-- `canvasWidth`: Width of the canvas in pixels
-- `canvasHeight`: Height of the canvas in pixels
-- `cooldownSeconds`: Time in seconds between each draw action
-- `port`: Server port (default: 3000)
-- `adminUsername`: Username for the admin area (Basic Auth)
-- `adminPassword`: Password for the admin area (Basic Auth)
-- `invitationCodes`: Array of valid invitation codes
-
-```json
-{
-  "canvasWidth": 960,
-  "canvasHeight": 540,
-  "cooldownSeconds": 0,
-  "port": 3000,
-  "adminUsername": "ED_Builder",
-  "adminPassword": "38e1e42867ab1f8a4d61a82da3b318703b4e6d93eb503e4e3ce994637fa1d19041c6ce332278f0655a060e043aed24163a0c26ce0d4546dbc092c6b4ae0f0dff",
-  "invitationCodes": [
-    "INVITE2024",
-    "DEMO1234",
-    "TEST5678"
-  ]
-}
-```
-
-## Usage
-
-### Getting Started
-
-1. Browse to the board to watch the canvas update in real time.
-2. When you're ready to draw, enter an invitation code (default codes: `INVITE2024`, `DEMO1234`, `TEST5678`).
-3. Click "Generate Token" to receive your drawing token and keep it handy for future sessions.
-4. Start drawing on the canvas!
-
-### Drawing
-
-1. Select a color using the color picker or enter a HEX color code
-2. Click on any pixel in the canvas to draw
-3. Wait for the cooldown period before drawing again
-
-### Admin Panel
-
-The admin panel allows you to:
-- View all invitation codes
-- Add new invitation codes
-- Delete existing invitation codes
-- Update the cooldown time
-
-Open `/admin` and authenticate with the configured username and password to access these features.
-
-## API Endpoints
-
-### Public Endpoints
-
-- `POST /api/generate-token` - Generate a drawing token
-  - Body: `{ "invitationCode": "string" }`
-  
-- `POST /api/validate-token` - Validate a token
-  - Body: `{ "token": "string" }`
-  
-- `POST /api/draw` - Draw a pixel
-  - Body: `{ "token": "string", "x": number, "y": number, "color": "#RRGGBB" }`
-  
-- `GET /api/canvas` - Get current canvas state
-  
-- `GET /api/config` - Get public configuration
-
-### Admin Endpoints
-
-- `GET /api/admin/invitation-codes` - Get all invitation codes
-- `POST /api/admin/invitation-codes` - Add a new invitation code
-  - Body: `{ "code": "string" }`
-- `DELETE /api/admin/invitation-codes/:code` - Delete an invitation code
-- `PUT /api/admin/cooldown` - Update cooldown time
-  - Body: `{ "cooldownSeconds": number }`
-
-## WebSocket
-
-Connect to the WebSocket server to receive real-time canvas updates:
-
-```javascript
-const ws = new WebSocket('wss://your-worker.your-account.workers.dev/ws');
-
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  if (message.type === 'pixel') {
-    // New pixel drawn: message.x, message.y, message.color
-  }
-};
-```
-
-## License
-
-MIT
+支持选择 HEX 颜色格式在画布上画一个像素点

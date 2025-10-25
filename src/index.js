@@ -342,8 +342,8 @@ async function getConfigFromKV(env) {
       canvasWidth: 960,
       canvasHeight: 540,
       cooldownSeconds: 0,
-      adminUsername: 'ED_Builder',
-      adminPassword: '38e1e42867ab1f8a4d61a82da3b318703b4e6d93eb503e4e3ce994637fa1d19041c6ce332278f0655a060e043aed24163a0c26ce0d4546dbc092c6b4ae0f0dff',
+      adminUsername: 'PaintBoard',
+      adminPassword: '26d37903166ba855278d8029878e9053923aa77eeba1943589d4b4774f1b14482c7233ab3f459ff86e99db9f1288447234ee80cfcb3f26330b94efa4267cea1a',
       invitationCodes: ['INVITE2024', 'DEMO1234', 'TEST5678']
     };
     await env.ED_PB_KV.put('config', JSON.stringify(config));
