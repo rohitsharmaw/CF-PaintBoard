@@ -5,7 +5,7 @@
 
 ## 部署方法
 1. fork 本仓库
-2. 在 `/src/index.js` 中找到 `API_BASE`，修改为你的域名
+2. 在 `/public/app.js` 中找到 `API_BASE`，修改为你的域名
 3. 修改 `/wrangler.toml`
 4. 在 Cloudflare 连接到你 fork 的仓库
 5. 构建命令为 `npm install`
